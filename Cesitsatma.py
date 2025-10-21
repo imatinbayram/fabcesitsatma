@@ -63,8 +63,6 @@ if not row.empty:
 else:
     filial_grup_kodu = None
 
-st.text(filial_grup_kodu)
-
 def cesitstok():
     today = date.today()
     #tarix_1 = today.replace(day=1).isoformat()
@@ -454,7 +452,7 @@ with pd.ExcelWriter(output2, engine='xlsxwriter') as writer2:
 excel_data2 = output2.getvalue()
 
 st.download_button(
-    label=":red[Satılmayan müştəriləri yüklə] :no_entry_sign:",
+    label=":red[Satılmayan müştəriləri yüklə] 📥",
     data=excel_data2,
     file_name=f"{select_filial} - Satılmayan müştərilər.xlsx",
     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
