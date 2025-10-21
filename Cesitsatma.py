@@ -37,10 +37,11 @@ bazarlama_filial = [
 'SEKI'
 ]
 
-select_filial = st.selectbox("Filial",bazarlama_filial,
+select_filial = st.selectbox("Filial seçin:",bazarlama_filial,
                                     index=0,
                                     placeholder = 'Filial',
-                                    label_visibility='collapsed')
+                                    #label_visibility='collapsed'
+                                    )
 
 musteri_qrup = pd.read_excel("Musteri.xlsx", sheet_name="Qrup")
 
