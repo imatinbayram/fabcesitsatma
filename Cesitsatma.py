@@ -253,7 +253,15 @@ tbody th {display: none !important;}      /* extra guard */
 </div>
 """, unsafe_allow_html=True)
 
-cesitstok_data = cesitstok()
+with st.spinner("Satış məlumatları yüklənir..."):
+    try:
+        cesitstok_data = cesitstok()
+    except Exception as e:
+        st.error(f"Xəta: {e}")
+
+if cesitstok_data is None or cesitstok_data.empty:
+    st.info("Məlumat tapılmadı.")
+
 
 cesitstok_data = cesitstok_data[cesitstok_data["Filial"]==select_filial]
 
@@ -265,7 +273,14 @@ pivot_cesitstok_data = cesitstok_data.pivot(
 
 pivot_cesitstok_data = pivot_cesitstok_data.fillna(0)
 
-musteri_sayi_func = musteri_sayi()
+with st.spinner("Müştəri sayları yüklənir..."):
+    try:
+        musteri_sayi_func = musteri_sayi()
+    except Exception as e:
+        st.error(f"Xəta: {e}")
+
+if musteri_sayi_func is None or musteri_sayi_func.empty:
+    st.info("Məlumat tapılmadı.")
 
 musteri_sayi_cedvel = musteri_sayi_func[["GroupName","ProductGroup","TotalContragentCount","MinSaleContragentCount"]]
 musteri_sayi_cedvel.rename(columns={
@@ -285,7 +300,7 @@ period_columns = ["7ci_ay", "8ci_ay", "9cu_ay", "10cu_ay",
                   "7_8_9_ay", "8_9_10_ay", "7_8_9_10_ay"]
 numeric_columns = ["Musteri sayi", "Hedef"] + period_columns
 
-final_columns = ["Filial", "Kateqoriya", "AD"] + numeric_columns
+final_columns = ["Filial", "AD"] + numeric_columns
 cesitstok_musterisay = cesitstok_musterisay[final_columns]
 
 cesitstok_musterisay["Performans"] = cesitstok_musterisay.apply(
@@ -293,7 +308,18 @@ cesitstok_musterisay["Performans"] = cesitstok_musterisay.apply(
     axis=1
 )
 
-styled_df = cesitstok_musterisay.style.format({col: "{:.0f}" for col in numeric_columns})
+def highlight_performans(row):
+    # If the 'Performans' column contains the phrase, color the whole row green
+    if "Az artim var" in str(row["Performans"]):
+        return ['background-color: green'] * len(row)
+    else:
+        return [''] * len(row)
+
+styled_df = (
+    cesitstok_musterisay.style
+    .format({col: "{:.0f}" for col in numeric_columns})
+    .apply(highlight_performans, axis=1)
+)
 
 st.table(styled_df)
 
