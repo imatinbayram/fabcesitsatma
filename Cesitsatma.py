@@ -37,6 +37,15 @@ bazarlama_filial = [
 'SEKI'
 ]
 
+today = date.today()
+tarix_1 = today.replace(day=1)
+tarix_2 = today
+
+# Format: DD.MM.YYYY
+tarix_1_str = tarix_1.strftime("%d.%m.%Y")
+tarix_2_str = tarix_2.strftime("%d.%m.%Y")
+
+st.text(f"Tarix: {tarix_2_str}")
 select_filial = st.selectbox("Filial seçin:",bazarlama_filial,
                                     index=0,
                                     placeholder = 'Filial',
@@ -132,17 +141,6 @@ def musteri_sayi():
         print("No data returned from API.")
         return pd.DataFrame()
 
-
-st.header(f"{select_filial} - ŞOK Kampaniya məhsulları müştəri sayı", divider='rainbow')
-today = date.today()
-tarix_1 = today.replace(day=1)
-tarix_2 = today
-
-# Format: DD.MM.YYYY
-tarix_1_str = tarix_1.strftime("%d.%m.%Y")
-tarix_2_str = tarix_2.strftime("%d.%m.%Y")
-
-st.text(f"Tarix: {tarix_2_str}")
 
 st.markdown("""
 <script>
@@ -254,6 +252,8 @@ tbody th {display: none !important;}      /* extra guard */
 </div>
 """, unsafe_allow_html=True)
 
+st.subheader(f"{select_filial} - ŞOK Kampaniya məhsulları müştəri sayı", divider='rainbow')
+
 with st.spinner("Satış məlumatları yüklənir..."):
     try:
         cesitstok_data = cesitstok()
@@ -350,3 +350,26 @@ st.download_button(
     file_name=f"{select_filial} - SOK Kampaniya mehsullari musteri sayi.xlsx",
     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 )
+
+st.subheader(f"{select_filial} - Çeşit satmaya görə icra", divider='rainbow')
+
+cesitsatma_icra = musteri_sayi_func[["GroupName","ProductGroup","TotalContragentCount","MinSaleContragentCount",
+                                     "SaleContragentCount","CompletedPercentage"]]
+cesitsatma_icra.rename(columns={
+    "GroupName": "Filial",
+    "ProductGroup": "Kateqoriya",
+    "TotalContragentCount": "Musteri sayi",
+    "MinSaleContragentCount": "Hedef",
+    "SaleContragentCount": "Satılan",
+    "CompletedPercentage": "İCRA"
+}, inplace=True)
+
+styled_cesitsatma_icra = (
+    cesitsatma_icra.style
+    .format(
+        {col: "{:.0f}" for col in numeric_columns if col != "İCRA"} | 
+        {"İCRA": lambda x: f"{x:.0f}%"}  # just add % without scaling
+    )
+)
+
+st.table(styled_cesitsatma_icra)
