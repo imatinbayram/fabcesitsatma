@@ -56,6 +56,15 @@ musteri_qrup = pd.read_excel("Musteri.xlsx", sheet_name="Qrup")
 
 temsilci_list = musteri_qrup[musteri_qrup["AD"] == select_filial]["Temsilci"].tolist()
 
+row = musteri_qrup.loc[musteri_qrup["AD"] == select_filial, "Grup"]
+
+if not row.empty:
+    filial_grup_kodu = row.iloc[0]
+else:
+    filial_grup_kodu = None
+
+st.text(filial_grup_kodu)
+
 def cesitstok():
     today = date.today()
     #tarix_1 = today.replace(day=1).isoformat()
@@ -141,6 +150,39 @@ def musteri_sayi():
         print("No data returned from API.")
         return pd.DataFrame()
 
+def satilmayanmusteri():
+    today = date.today()
+    #tarix_1 = today.replace(day=1).isoformat()
+    buguntarix = today.isoformat()
+    with open("SatilmayanMusteri.sql", encoding="utf-8") as f:
+        query_text = f.read().lstrip('\ufeff')
+    query = f"""
+    
+    DECLARE @filial NVARCHAR(50) = N'{filial_grup_kodu}';
+    DECLARE @BugunTarix DATE = '{buguntarix}';
+    
+    {query_text}
+    """
+    url = "http://81.17.83.210:1999/api/Metin/GetQueryTable"
+    headers = {
+        "Content-Type": "application/json",
+        "Accept": "application/json"
+    }
+    html_json = {
+    "Query": query
+    }
+    response = requests.get(url, json=html_json, headers=headers, verify=False)
+
+    if response.status_code == 200:
+        api_data = response.json()
+        if api_data["Code"] == 0:
+            df = api_data["Data"]
+        else:
+            print("API Error:", api_data["Message"])
+    else:
+        print("Error:", response.status_code, response.text)
+        
+    return pd.DataFrame(df)
 
 st.markdown("""
 <script>
@@ -252,7 +294,9 @@ tbody th {display: none !important;}      /* extra guard */
 </div>
 """, unsafe_allow_html=True)
 
-st.subheader(f"{select_filial} - ŞOK Kampaniya məhsulları müştəri sayı", divider='rainbow')
+##################################################
+#SOK KAMPANIYA SOHBETLERI
+##################################################
 
 with st.spinner("Satış məlumatları yüklənir..."):
     try:
@@ -322,6 +366,7 @@ styled_df = (
     .apply(highlight_performans, axis=1)
 )
 
+st.subheader(f"{select_filial} - ŞOK Kampaniya məhsulları müştəri sayı", divider='rainbow')
 st.table(styled_df)
 
 # ---------------------------------------------
@@ -351,7 +396,9 @@ st.download_button(
     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 )
 
-st.subheader(f"{select_filial} - Çeşit satmaya görə icra", divider='rainbow')
+##################################################
+#CESIT SATMA ICRA
+##################################################
 
 cesitsatma_icra = musteri_sayi_func[["GroupName","ProductGroup","TotalContragentCount","MinSaleContragentCount",
                                      "SaleContragentCount","CompletedPercentage"]]
@@ -372,4 +419,43 @@ styled_cesitsatma_icra = (
     )
 )
 
+st.subheader(f"{select_filial} - Çeşit satmaya görə icra", divider='rainbow')
+
 st.table(styled_cesitsatma_icra)
+
+##################################################
+#KATEQORIYA SATMAYAN MUSTERILER
+##################################################
+
+with st.spinner("Satılmayan müştərilər yüklənir..."):
+    try:
+        satilmayan_musteri = satilmayanmusteri()
+    except Exception as e:
+        st.error(f"Xəta: {e}")
+
+if satilmayan_musteri is None or satilmayan_musteri.empty:
+    st.info("Məlumat tapılmadı.")
+    
+st.subheader(f"{select_filial} - Kateqoriya satılmayan müştərilər", divider='rainbow')
+
+output2 = BytesIO()
+with pd.ExcelWriter(output2, engine='xlsxwriter') as writer2:
+    satilmayan_musteri.to_excel(writer2, index=False, sheet_name='Satılmayan')
+    worksheet2 = writer2.sheets['Satılmayan']
+
+    # Auto column width
+    for i, col in enumerate(satilmayan_musteri.columns):
+        max_len = max(
+            satilmayan_musteri[col].astype(str).map(len).max(),
+            len(str(col))
+        )
+        worksheet2.set_column(i, i, max_len + 2)
+
+excel_data2 = output2.getvalue()
+
+st.download_button(
+    label=":red[Satılmayan müştəriləri yüklə] :no_entry_sign:",
+    data=excel_data2,
+    file_name=f"{select_filial} - Satılmayan müştərilər.xlsx",
+    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+)
