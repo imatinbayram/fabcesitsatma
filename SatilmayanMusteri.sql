@@ -78,5 +78,6 @@ LEFT JOIN [MikroDB_V16_05].[dbo].CARI_HESAP_GRUPLARI CRG
     ON CRG.crg_kod COLLATE SQL_Latin1_General_CP1_CI_AS = CARI.cari_grup_kodu COLLATE SQL_Latin1_General_CP1_CI_AS
 WHERE
     S.ProductName is null
+    and CRG.crg_kod = @filial
 ORDER BY
     T.ProductName,CARI.cari_unvan1
